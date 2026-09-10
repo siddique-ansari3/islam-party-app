@@ -1,6 +1,7 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { upload } = require('../utils/upload');
+const asyncHandler = require('../utils/asyncHandler');
 const {
   listWorkers,
   getWorker,
@@ -17,10 +18,10 @@ const uploadFields = upload.fields([
 ]);
 
 router.use(requireAuth);
-router.get('/', listWorkers);
-router.get('/:id', getWorker);
-router.post('/', uploadFields, createWorker);
-router.put('/:id', uploadFields, updateWorker);
-router.delete('/:id', deleteWorker);
+router.get('/', asyncHandler(listWorkers));
+router.get('/:id', asyncHandler(getWorker));
+router.post('/', uploadFields, asyncHandler(createWorker));
+router.put('/:id', uploadFields, asyncHandler(updateWorker));
+router.delete('/:id', asyncHandler(deleteWorker));
 
 module.exports = router;

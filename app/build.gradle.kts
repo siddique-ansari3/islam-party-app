@@ -17,7 +17,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Override in local.properties or a CI secret store - never hardcode a production URL here.
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:4000/\"")
+        buildConfigField("String", "API_BASE_URL", "\"https://islam-party-app.onrender.com/\"")
     }
 
     buildTypes {
