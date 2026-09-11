@@ -55,8 +55,8 @@ async function start() {
     const shouldSync = process.env.AUTO_SYNC_DB !== 'false';
     if (shouldSync) {
       await sequelize.sync();
-      await ensureSuperAdmin();
     }
+    await ensureSuperAdmin();
   } catch (err) {
     console.error('Failed to prepare the database:', err);
     process.exit(1);

@@ -1,7 +1,7 @@
 const { Op } = require('sequelize');
 const path = require('path');
 const fs = require('fs');
-const { Worker } = require('../models');
+const { User, Worker } = require('../models');
 
 function scopeCityForUser(req, whereClause = {}) {
   if (req.user.role === 'city_admin') {
@@ -125,6 +125,15 @@ async function createWorker(req, res) {
   // city_admins may only create workers within their own city.
   const city = req.user.role === 'city_admin' ? req.user.city : req.body.city.trim();
 
+  // created_by_id must be a live users.id, not a possibly stale JWT `sub`.
+  let creator = req.user.id ? await User.findByPk(req.user.id) : null;
+  if (!creator && req.user.email) {
+    creator = await User.findOne({ where: { email: String(req.user.email).toLowerCase().trim() } });
+  }
+  if (!creator) {
+    return res.status(401).json({ error: 'Authenticated user was not found' });
+  }
+
   const existingMobile = await Worker.findOne({ where: { mobileNumber: req.body.mobileNumber } });
   if (existingMobile) return res.status(409).json({ error: 'A worker with this mobile number already exists' });
 
@@ -139,7 +148,7 @@ async function createWorker(req, res) {
     designation: req.body.designation || null,
     email: req.body.email || null,
     notes: req.body.notes || null,
-    createdById: req.user.id,
+    createdById: creator.id,
     aadhaarLast4: req.body.aadhaarNumber.slice(-4),
   });
   Worker.setAadhaar(worker, req.body.aadhaarNumber);
