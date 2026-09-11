@@ -4,8 +4,14 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 private val Context.dataStore by preferencesDataStore(name = "auth_prefs")
@@ -24,7 +30,12 @@ class TokenManager(private val context: Context) {
         val NAME = stringPreferencesKey("name")
     }
 
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     val cachedToken = MutableStateFlow<String?>(null)
+
+    private val _sessionExpired = MutableStateFlow(false)
+    val sessionExpired: StateFlow<Boolean> = _sessionExpired.asStateFlow()
 
     init {
         cachedToken.value = runBlocking { context.dataStore.data.first()[Keys.TOKEN] }
@@ -38,11 +49,25 @@ class TokenManager(private val context: Context) {
             prefs[Keys.NAME] = name
         }
         cachedToken.value = token
+        _sessionExpired.value = false
     }
 
     suspend fun clearSession() {
         context.dataStore.edit { it.clear() }
         cachedToken.value = null
+        _sessionExpired.value = false
+    }
+
+    /** Called from OkHttp when a request that sent a Bearer token receives HTTP 401. */
+    fun onUnauthorized() {
+        if (cachedToken.value.isNullOrBlank() && _sessionExpired.value) return
+        cachedToken.value = null
+        _sessionExpired.value = true
+        ioScope.launch { context.dataStore.edit { it.clear() } }
+    }
+
+    fun consumeSessionExpired() {
+        _sessionExpired.value = false
     }
 
     suspend fun getRole(): String? = context.dataStore.data.first()[Keys.ROLE]

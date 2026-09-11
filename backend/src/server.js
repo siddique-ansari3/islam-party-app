@@ -14,6 +14,10 @@ const fileRoutes = require('./routes/file.routes');
 
 const app = express();
 
+// Render (and other PaaS proxies) set X-Forwarded-For. Trust the first hop so
+// express-rate-limit can key by client IP instead of throwing ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));

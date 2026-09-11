@@ -24,7 +24,14 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
             _state.value = UiState.Loading
             authRepository.login(email, password)
                 .onSuccess { _state.value = UiState.Success(Unit) }
-                .onFailure { _state.value = UiState.Error(it.toUserMessage()) }
+                .onFailure { error ->
+                    val message = if (error is retrofit2.HttpException && error.code() == 401) {
+                        "Invalid email or password"
+                    } else {
+                        error.toUserMessage()
+                    }
+                    _state.value = UiState.Error(message)
+                }
         }
     }
 }
